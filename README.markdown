@@ -1,10 +1,10 @@
 Simple node.js music app.
-Features:
-	Users have own playlist(each user have only one playlist)
-	User can add/delete items in playlist
+Features:<br>
+	Users have own playlist(each user have only one playlist)<br>
+	User can add/delete items in playlist<br>
 
-It uses:
-	Express Framework
-	Mongoose ORM
-	Swig Template Engine
-	redis nosql database server
+It uses:<br>
+	Express Framework<br>
+	Mongoose ORM<br>
+	Swig Template Engine<br>
+	redis nosql database server<br>
