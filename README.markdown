@@ -7,5 +7,4 @@ Simple node.js music app.<br>
 <b>It uses:</b><br>
 	Express Framework<br>
 	Mongoose ORM<br>
-	Swig Template Engine<br>
 	redis nosql database server<br>
