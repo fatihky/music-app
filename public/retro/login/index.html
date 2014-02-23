@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<title>jQuery UI Example Page</title>
+	<link href="/css/retro/jquery-ui-1.9.0.custom.css" rel="stylesheet">
+	<style>
+	body{
+		font: 62.5% "Helvetica Neue", Helvetica, Arial, sans-serif;
+		margin: 50px;
+	}
+
+    body { background-color: #fdfdfd; padding: 0 20px; color:#000; font: 13px/18px monospace; width: 800px;}
+    a { color: #360; }
+
+	section.wrapper {
+		width: 600px;
+		margin: 0 auto;
+	}
+	
+	h1 {
+		font-size: 28px;
+		border-bottom: 1px solid #ccc;
+		padding-bottom: 20px;
+	}
+	.demoHeaders {
+		margin-top: 2em;
+	}
+
+	input[type="password"] {
+    	padding: 8px;
+    	background-color: rgb(225, 221, 208);
+    	background-image: url("images/bg-noise.png");
+    	box-shadow: 0px 1px 3px rgb(157, 153, 139) inset;
+    	color: rgb(157, 153, 139);
+    	text-shadow: 0px 1px 0px rgba(255, 255, 255, 0.25);
+    	font-weight: bold;
+    	border-radius: 2px;
+    	border: medium none;
+	}
+
+	</style>
+</head>
+<body><section class="wrapper">
+
+<h1>Music Library backed by <span style="color: #bc4e39;">node.js</span></h1>
+<h3><span style="color: #bc4e39;">login</span></h3>
+
+<!--Messages-->
+<div id="messages"></div>
+
+<!--Login Form-->
+<div id="login-form" style="display: none;">
+	<form method="post">
+		<p><input type="text" name="username" id="username-input" placeholder="Username"/></p>
+		<p><input type="password" name="password" id="password-input" placeholder="Password"/></p>
+	</form>
+		<p id="login-link" style="margin-top: 0px;" class="ui-button ui-state-default ui-corner-all ui-button-text-only">Login</p>
+</div>
+
+<!--Logout Form-->
+<div id="logout-form" style="display: none;">
+	<div class="ui-widget">
+		<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;">
+			<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+			<strong>Info:</strong> You are already logged in.<br>
+			You will be redirected to home page in <span id="seconds-left-2">10</span> seconds.</p>
+		</div>
+	</div>
+	<p id="logout-link" class="ui-button ui-state-default ui-corner-all ui-button-text-only">Logout</p>
+</div>
+
+<br clear="all" />
+
+</div></section>
+
+	<script src="/js/jquery-1.8.2.js"></script>
+	<script src="/js/jquery-ui-1.9.0.custom.js"></script>
+	<script src="/js/jquery.fileupload.js"></script>
+
+	<script>
+$(document).ready(function(){
+	var redirect_interval;
+
+	$.ajax({
+		url: "/ajax/get-auth",
+		type: "GET",
+		success: function(data)
+		{
+			if(data.auth == false)
+			{
+				$("#login-form").slideDown(1400);
+			} else {
+				$("#logout-form").slideDown(1200);
+
+					var redirect_time = parseInt(Date.now()) + 10000;
+
+					redirect_interval = setInterval(function(){
+						var seconds_left = (redirect_time - Date.now()) % 10000;
+						seconds_left = seconds_left / 1000;
+
+						$("#seconds-left-2").text(seconds_left.toString().split(".")[0]);
+						if(seconds_left < 1)
+							window.location = "/";
+					}, 100);
+			}
+		}
+	});
+
+	$("#logout-link, #login-link").hover(function(event){
+		$(this).addClass("ui-state-hover");
+		$(this).removeClass("ui-state-default");
+	},
+	function(){
+		$(this).removeClass("ui-state-hover");
+		$(this).addClass("ui-state-default");
+	});
+
+	$("#login-link").click(function(){
+
+		$.ajax({
+			url: "/ajax/login",
+			type: "POST",
+			data: {
+				username: $("#username-input").val(),
+				password: $("#password-input").val()
+			},
+			dataType: "html",
+			success: function(data)
+			{
+				if(typeof(data) == "string")
+					data = JSON.parse(data);
+				
+				if(data.auth == false)
+				{
+					var err_msg = "";
+					err_msg += "<div class=\"ui-widget\">";
+					err_msg +=	 "<div class=\"ui-state-error ui-corner-all\" style=\"padding: 0 .7em;\">";
+					err_msg +=		"<p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span>";
+					err_msg +=		"<strong>Error:</strong> " + "incorrect password/username. please try again" + ".</p>";
+					err_msg +=	 "</div>";
+					err_msg += "</div>";
+					$("#messages").slideUp(400).text("").html(err_msg).slideDown(600);
+				} else {
+					var msg = ""; 
+					msg += "<div class=\"ui-widget\">";
+					msg +=	 "<div class=\"ui-state-highlight ui-corner-all\" style=\"padding: 0 .7em;\">";
+					msg +=		"<p><span class=\"ui-icon ui-icon-info\" style=\"float: left; margin-right: .3em;\"></span>";
+					msg +=		"<strong>İnfo:</strong> " + "You are successfully logged in" + ".<br>";
+					msg += "You will be redirected to home page in <span id=\"seconds-left\">10</span> seconds.</p>";
+					msg +=	 "</div>";
+					msg += "</div>";
+					
+					$("#messages").fadeOut(100).text("").html(msg).fadeIn(600);
+					$("#login-form").slideUp(1200);
+
+					var redirect_time = parseInt(Date.now()) + 10000;
+
+					setInterval(function(){
+						var seconds_left = (redirect_time - Date.now()) % 10000;
+						seconds_left = seconds_left / 1000;
+
+						$("#seconds-left").text(seconds_left.toString().split(".")[0]);
+						if(seconds_left < 1) window.location = "/";
+					}, 100);
+				}
+			}
+		});
+	});
+
+	$("#logout-link").click(function(){
+		clearInterval(redirect_interval);
+
+		$.ajax({
+			url: "/ajax/logout",
+			type: "GET",
+			success: function(data)
+			{
+				if(data.auth == false)
+				{
+					var msg = "";
+					msg += "<div class=\"ui-widget\">";
+					msg +=	 "<div class=\"ui-state-highlight ui-corner-all\" style=\"padding: 0 .7em;\">";
+					msg +=		"<p><span class=\"ui-icon ui-icon-info\" style=\"float: left; margin-right: .3em;\"></span>";
+					msg +=		"<strong>İnfo:</strong> " + "You are successfully logged out" + ".</p>";
+					msg +=	 "</div>";
+					msg += "</div>";
+					
+					$("#messages").slideUp(400).text("").html(msg).slideDown(600);
+					$("#logout-form").slideUp(1200);
+					$("#login-form").slideDown(1400);
+				} else {
+					var err_msg = "";
+					err_msg += "<div class=\"ui-widget\">";
+					err_msg +=	 "<div class=\"ui-state-error ui-corner-all\" style=\"padding: 0 .7em;\">";
+					err_msg +=		"<p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span>";
+					err_msg +=		"<strong>Error:</strong> " + "you can not logout. please try again later" + ".</p>";
+					err_msg +=	 "</div>";
+					err_msg += "</div>";
+					
+					$("#messages").slideUp(400).text("").html(err_msg).slideDown(600);
+				}
+			}
+		});
+	});
+}); // $(document.ready())
+	</script>
+	</body>
+</html>

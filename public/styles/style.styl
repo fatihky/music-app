@@ -1,0 +1,157 @@
+/* Global Functions */
+// Define collect of vendor prefixes.
+// Official will be used to output the property without a prefix.
+vendors = webkit moz o ms official
+// Define a function to add vendor prefixes to a property and then pass the arguments.
+vendor(prop, args)
+  for vendor in vendors
+      if vendor == official
+        {prop} args
+      else
+        -{vendor}-{prop}: args
+fs()
+  font-size arguments
+shad()
+  vendor 'box-shadow' arguments
+bi()
+  background-image arguments
+// Define gradient function:
+grad()
+  bi -moz-linear-gradient(arguments);
+  bi -webkit-linear-gradient(arguments);
+  bi -o-linear-gradient(arguments);
+  bi -ms-linear-gradient(arguments);
+  bi linear-gradient(arguments);
+bc()
+  background-color arguments
+rad()
+  vendor 'border-radius' arguments
+pad()
+  padding arguments
+padb()
+  padding-bottom arguments
+mar()
+  margin arguments
+marb()
+  margin-bottom arguments
+bor()
+  border arguments
+bort()
+  border-top arguments
+borb()
+  border-bottom arguments
+deco()
+  text-decoration arguments
+fw()
+	font-weight arguments
+/* Begin App Styles */
+html, body
+  mar 0
+  pad 0
+  min-height 100%
+body
+  font normal 14px/18px Helvetica, Arial, Sans-Serif
+#main
+  width 960px
+  mar 0 auto
+  pad 20px 20px 40px 20px
+  mart 20px
+  bor solid 1px #ddd
+  bort none
+h1
+  padb 10px
+  borb double 10px #666
+  mart 30px
+  &.returnHome a
+    deco none
+    color #000
+  &.noBottomBorder
+    bort none
+  &.showCursor
+    cursor pointer
+h2:after
+  content ":"
+h3  
+  mart 40px
+.product
+  mart 40px
+  pad 1px 0 10px
+  borb dotted 2px rgba(0,0,0,0.1)
+.imageList 
+  ul
+    marb 40px
+    li
+      list-style none
+      padb 20px
+      borb solid 1px #ccc
+      img
+        margin 20px 20px 20px 0
+    &:after
+      content ""
+      display block
+      clear both
+a
+  &.logout
+    float right
+    mar 0 0 0 20px
+  &.button
+    grad top, #fff, #ccc
+    bor solid 1px #666
+    rad 5px
+    pad 4px 23px
+    deco none
+    color #000
+    shad 1px 1px 3px #666
+    fs 14px
+    &:hover
+      bi none;
+      shad inset 0 0 8px #aaa, 1px 1px 3px #666
+    &:active
+      grad top, #ccc, #fff
+      shad none
+    &.back
+      border-top-left-radius 40px 20px
+      border-bottom-left-radius 40px 20px
+      border-top-right-radius 8px
+      border-bottom-right-radius 8px
+      padding-left 27px
+      margin-right 20px
+input[type=file]
+  font-size 14px
+  text-align right
+  &::-webkit-file-upload-button
+    grad top, #fff, #ccc
+    bor solid 1px #666
+    rad 5px
+    pad 4px 23px
+    deco none
+    color #000
+    shad 1px 1px 3px #666
+    grad top, #ccc, #fff
+  &.hover::-webkit-file-upload-button
+    -webkit-appearance none
+    bi none;
+    bc #fff
+    shad inset 0 0 8px #aaa, 1px 1px 3px #666
+textarea 
+  width: 400px
+  height: 100px
+#productName
+  width: 400px
+.error
+  color red;
+  bc #fff9d6
+  bor solid 1px red
+  fw bold
+  pad 20px
+span.error
+  mar 10px 0 20px
+  display inline-block
+.name
+  fw bold
+.label
+  mar 0
+.label + p 
+  margin-top 0
+.selectLabel
+  margin-top 0

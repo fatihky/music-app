@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<title>jQuery UI Example Page</title>
+	<link href="/css/retro/jquery-ui-1.9.0.custom.css" rel="stylesheet">
+	<script src="/js/jquery-1.8.2.js"></script>
+	<script src="/js/jquery-ui-1.9.0.custom.js"></script>
+	<script src="/js/jquery.fileupload.js"></script>
+
+    <!-- Load player theme -->
+    <!-- <link rel="stylesheet" href="themes/maccaco/projekktor.style.css" type="text/css" media="screen" /> -->
+
+    <!-- load projekktor -->
+    <script type="text/javascript" src="/js/projekktor-1.3.05.js"></script>
+
+	<script>
+	var add_music, del_music;
+	$(function() {
+		
+		$( "#progressbar" ).progressbar({
+			value: 0
+		});
+		$( "#progressbar" ).hide(0);
+
+		// Hover states on the static widgets
+		$( "#dialog-link" ).hover(
+			function() {
+				$( this ).addClass( "ui-state-hover" );
+			},
+			function() {
+				$( this ).removeClass( "ui-state-hover" );
+			}
+		);
+
+		// Link to open the dialog
+		$( "#dialog-link" ).click(function( event ) {
+			$( "#dialog" ).dialog( "open" );
+			event.preventDefault();
+		});
+
+		$( "#dialog" ).dialog({
+			autoOpen: false,
+			width: 400,
+			buttons: [
+				{
+					text: "Ok",
+					click: function() {
+						var ref = this;
+						$("#add-music").slideToggle(600);
+						$('div#progressbar').show();
+						var formData = new FormData();
+						var file = document.getElementById('add-music--file').files[0];
+						formData.append('title', $("#add-music--title").val());
+						formData.append('singer', $("#add-music--singer").val());
+						formData.append('album', $("#add-music--album").val());
+						formData.append('year', $("#add-music--year").val());
+						formData.append('file', file);
+						var xhr = new XMLHttpRequest();
+						xhr.open('post', '/add-music', true);
+						xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+						xhr.upload.onprogress = function(e) {
+							if (e.lengthComputable) {
+								var percentage = (e.loaded / e.total) * 100;
+								$('#progressbar').progressbar('value', percentage);
+							}
+						};
+						xhr.onerror = function(e) {
+							console.log("ONERROR: " + 'An error occurred while submitting the form. Maybe your file is too big');
+						};
+						xhr.onload = function() {
+							$("#progressbar").hide();
+							if(this.status != 200){
+								if(this.status == 401)
+								{
+									alert("Please login!");
+									window.location = "/login";
+								}
+								else if(this.status == 500)
+									alert("Internal server error. Please try again later.");
+								$( ref ).dialog( "close" );
+								return;
+							}
+							var json = JSON.parse(this.responseText);
+
+							switch(json[0])
+							{
+								case "err":
+								{
+								$("#add-music").slideDown(600);
+								var err = "<br>";
+								if(json.length == 1) err = "Please try again later";
+								else if(json.length == 2) err = json[1];
+								else
+								{
+									for(var i = 0; i < json[1].length; i++)
+									{
+										err += json[1][i] + ": ";
+										err += json[2][i];
+										if(i != json[1].length -1)
+											err += "<br>";
+									}
+								}
+
+								var err_msg = "";
+	err_msg += "<div class=\"ui-widget\">";
+	err_msg +=	 "<div class=\"ui-state-error ui-corner-all\" style=\"padding: 0 .7em;\">";
+	err_msg +=		"<p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span>";
+	err_msg +=		"<strong>Error:</strong> " + err + ".</p>";
+	err_msg +=	 "</div>";
+	err_msg += "</div>";
+								$("#add-music-message").hide(400).text("");
+								$(err_msg).appendTo("#add-music-message");
+								$("#add-music-message").slideDown(1600);
+
+								} break;
+								case "ok":
+								{
+								var msg = ""; 
+	msg += "<div class=\"ui-widget\">";
+	msg +=	 "<div class=\"ui-state-highlight ui-corner-all\" style=\"padding: 0 .7em;\">";
+	msg +=		"<p><span class=\"ui-icon ui-icon-info\" style=\"float: left; margin-right: .3em;\"></span>";
+	msg +=		"<strong>İnfo:</strong> " + json[1].msg + ".</p>";
+	msg +=	 "</div>";
+	msg += "</div>";
+								$(msg).appendTo("#add-music-message");
+
+								$("#add-music-message").slideToggle(1600);
+
+								$("#add-music--title").val("");
+								$("#add-music--album").val("");
+								$("#add-music--singer").val("");
+								$("#add-music--year").val("");
+								$("#add-music--file").val("");
+
+								$("#add-music").slideToggle(600);
+
+								add_music(json[1]);
+
+								setTimeout(function(){
+									$( ref ).dialog( "close" );
+									$("#add-music-message").text("").hide(0);
+								}, 4500);
+
+								if($("#playlist-messages").text())
+									$("#playlist-messages").slideUp(1200);
+
+								} break;
+							}
+							console.log("json[0]: " + json[0]);
+						};
+						xhr.send(formData);
+					//$( this ).dialog( "close" );
+					}
+				},
+				{
+					text: "Cancel",
+					click: function() {
+						$( this ).dialog( "close" );
+					}
+				}
+			]
+		});
+
+		$("#delete-track").click(function(){
+			$( "#delete-track-dialog" ).dialog("open");
+		});
+
+		$( "#delete-track-dialog" ).dialog({
+			autoOpen: false,
+			width: 400,
+			buttons: [
+				{
+					text: "Ok",
+					click: function() {
+						var _id = $("#delete-track")
+							.attr("data-current-id");
+						var idx = $("#delete-track")
+							.attr("data-current-idx");
+						$.ajax({
+							url: "/del-music/" + _id,
+							type: "GET",
+							success: function(data)
+							{
+								del_music(idx);
+								$( "#delete-track-dialog" ).dialog( "close" );
+							}
+						});
+					}
+				},
+				{
+					text: "Cancel",
+					click: function() {
+						$( this ).dialog( "close" );
+					}
+				}
+			]
+		});
+
+	});
+	</script>
+	<style>
+	body{
+		font: 62.5% "Helvetica Neue", Helvetica, Arial, sans-serif;
+		margin: 50px;
+	}
+
+    body { background-color: #fdfdfd; padding: 0 20px; color:#000; font: 13px/18px monospace; width: 800px;}
+    a { color: #360; }
+    h3 { padding-top: 20px; }
+
+	section.wrapper {
+		width: 600px;
+		margin: 0 auto;
+	}
+	
+	h1 {
+		font-size: 28px;
+		border-bottom: 1px solid #ccc;
+		padding-bottom: 20px;
+	}
+	.demoHeaders {
+		margin-top: 2em;
+	}
+
+	#player-controls, #playlist-controls {
+		margin: 0;
+		padding: 0;
+	}
+	#player-controls li, #playlist-controls li {
+		margin: 2px;
+		position: relative;
+		padding: 4px 0;
+		cursor: pointer;
+		float: left;
+		list-style: none;
+	}
+	#player-controls span.ui-icon, #playlist-controls span.ui-icon {
+		float: left;
+		margin: 0 4px;
+	}
+
+	#playlist li {
+		margin: 2px;
+		position: relative;
+		padding: 4px 0;
+		cursor: pointer;
+		list-style: none;
+	}
+
+	#add-music input {
+		width: 350px;
+	}
+
+	input#add-music--year {
+		width: 100px;
+	}
+
+	</style>
+</head>
+<body><section class="wrapper">
+
+<h1>Music Library backed by <span style="color: #bc4e39;">node.js</span></h1>
+
+<!-- add music dialog -->
+<div id="dialog" title="Dialog Title">
+	<div id="add-music-message"></div>
+	<form id="add-music">
+		<p><input type="text" id="add-music--title" placeholder="Title"/><br/></p>
+		<p><input type="text" id="add-music--singer" placeholder="Singer"/><br/></p>
+		<p><input type="text" id="add-music--album" placeholder="Album"/><br/></p>
+		<p><input type="text" id="add-music--year" placeholder="Year"/><br/></p>
+		File: <input type="file" name="file" id="add-music--file" />
+	</form>
+	<br clear="all" />
+	<div id="progressbar"></div>
+</div>
+
+<!-- delete music dialog -->
+<div id="delete-track-dialog" title="Dialog Title">
+	<p>Do you want to delete: </p><p id="delete-track--title"></p>
+</div>
+
+<ul id="player-controls" class="ui-widget ui-helper-clearfix">
+	<li id="play" class="ui-state-default ui-corner-all"><span class="ui-icon ui-icon-play"></span></li>
+	<li id="pause" class="ui-state-default ui-corner-all"><span class="ui-icon ui-icon-pause"></span></li>
+	<li id="stop" class="ui-state-default ui-corner-all"><span class="ui-icon ui-icon-stop"></span></li>
+	<li id="previous-track" style="margin-left: 8px;" class="ui-state-default ui-corner-all"><span class="ui-icon ui-icon-seek-prev"></span></li>
+	<li id="next-track"  style="margin-right: 10px;" class="ui-state-default ui-corner-all"><span class="ui-icon ui-icon-seek-next"></span></li>
+	<li><a id="now-playing"></a></li>
+</ul>
+
+<br clear="all" />
+
+<div id="slider"></div>
+
+<br clear="all" />
+
+<ul id="playlist-controls" class="ui-widget ui-helper-clearfix">
+	<li id="dialog-link" style="display: none;" class="ui-state-default ui-corner-all"><span class="ui-icon ui-icon-circle-plus"></span> Add new track</li>
+	<li id="playlist-collapse" class="ui-state-default ui-corner-all"><span class="ui-icon ui-icon-circle-triangle-n"></span></li>
+	<li id="delete-track" style="margin-left: 15px; display: none;" class="ui-state-disabled ui-corner-all"><span class="ui-icon ui-icon-trash"></span></li>
+</ul>
+
+<!--Playlist Messages-->
+<div id="playlist-messages"></div>
+
+<!--Playlist-->
+<ul id="playlist"></ul>
+
+<br clear="all" />
+
+<div id="player"></div>
+
+	<script>
+	$(function() {
+
+        var p, auth;
+        projekktor('#player', {
+        playerFlashMP4: 'swf/StrobeMediaPlayback/StrobeMediaPlayback.swf',
+        playerFlashMP3: 'swf/StrobeMediaPlayback/StrobeMediaPlayback.swf',
+        width: 0,
+        height: 0
+        }, function(player) {
+
+		var manual_change = false;
+		var last_value = 0;
+		var paused = false;
+
+        p = player;
+
+        $("#player").hide(0);
+
+        add_music = function(music)
+        {
+        	var item = new Object();
+        	item.src = "/uploads/music/" + music.filepath;
+        	item.type = "audio/mp3";
+        	$("<li></li>").html("<a>" + music.title + "</a>")
+        		.appendTo("#playlist").attr("data-id", music._id);
+        	p.setItem(item, p.getItemCount(), true);
+        }
+
+        del_music = function(idx)
+        {
+        	$("#playlist li:eq(" + idx + ")").hide(450).remove();
+        	$("#next-track").trigger("click");
+        	p._removeItem(idx);
+        }
+
+		var load_playlist = setInterval(function(){
+			$.ajax({
+				url: "/get-playlist",
+				// url: "/api/v1/get-playlist",
+				type: "GET",
+				success: function(data)
+				{
+					var i = 0;
+					auth = data.auth;
+
+					if(auth == true)
+					{
+						$("#delete-track").show(400);
+						$("#dialog-link").show(750);
+					} else {
+						$("#delete-track").unbind("click");
+					}
+
+					if(data.results.length == 0)
+					{
+						var err_msg = "";
+	err_msg += "<div class=\"ui-widget\">";
+	err_msg +=	 "<div class=\"ui-state-error ui-corner-all\" style=\"padding: 0 .7em;\">";
+	err_msg +=		"<p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span>";
+	err_msg +=		"<strong>Error:</strong> " + "you don't have any music yet" + ".</p>";
+	err_msg +=	 "</div>";
+	err_msg += "</div>";
+						$("#playlist-messages").slideToggle(0);
+						$(err_msg).appendTo("#playlist-messages");
+						$("#playlist-messages").slideToggle(1600);
+					}
+
+					for(; i < data.results.length; i++)
+					{
+						add_music(data.results[i]);
+					}
+
+					clearInterval(load_playlist);
+					console.log("PLAYLIST LOADED");
+
+				}
+			});
+		}, 2000);
+
+        $("#previous-track").click(function(){
+            if(p.getState() == "PAUSED" || p.getState() == "IDLE")
+            	$("#play").trigger("click");
+
+            $playing = $("#playlist li:eq(" +
+							+ p.getItemIdx() +  ")");
+			$playing.animate({fontSize: 13});
+
+            if(p.getIsFirstItem()) p.setActiveItem(p.getItemCount() - 1);
+            else p.setActiveItem(p.getItemIdx() - 1);
+        });
+
+        $("#next-track").click(function(){
+            if(p.getState() == "PAUSED" || p.getState() == "IDLE")
+            	$("#play").trigger("click");
+
+            $playing = $("#playlist li:eq(" +
+							+ p.getItemIdx() +  ")");
+			$playing.animate({fontSize: 13});
+            
+            if(p.getIsLastItem()) p.setActiveItem("first");
+            else p.setActiveItem("next");
+        });
+
+	    // Player Controls
+	    $("#play, #pause, #stop, #previous-track, #next-track, #playlist-collapse, #delete-track")
+	    		.hover(function(event){
+	    	$(this).addClass("ui-state-hover");
+	    	$(this).removeClass("ui-state-default");
+	    },
+	    function(){
+	    	$(this).removeClass("ui-state-hover");
+	    	$(this).addClass("ui-state-default");
+	    });
+
+	    $("#playlist-collapse").attr("collapsed", "false");
+
+	    $("#playlist-collapse").click(function(){
+	    	var ref = this;
+
+	    	$(this).removeClass("ui-state-default");
+	    	$(this).addClass("ui-state-active");
+
+	    	var $el = $("#playlist-collapse span")
+	    	  , $parent = $("#playlist-collapse");
+	    	if($parent.attr("collapsed") == "false")
+	    	{
+	    		$("#playlist").slideToggle(600);
+	    		$el.removeClass("ui-icon-circle-triangle-n")
+	    			.addClass("ui-icon-circle-triangle-s");
+	    		$parent.attr("collapsed", "true");
+	    	} else {
+	    		$("#playlist").slideToggle(600);
+	    		$el.removeClass("ui-icon-circle-triangle-s")
+	    			.addClass("ui-icon-circle-triangle-n");
+	    		$parent.attr("collapsed", "false");
+	    	}
+
+	    	setTimeout(function(){
+		    	$(ref).removeClass("ui-state-active");
+		    	$(ref).addClass("ui-state-default");
+	    	}, 400);
+	    });
+
+	    $("#playlist").on("mouseover", "li", function(){
+	    	var index = $(this).index()
+	    	  , $el = $("#playlist li:eq(" + index + ")");
+	    	var font_size = parseInt($el.css("fontSize")
+	    		.substr(0, $el.css("fontSize").indexOf("px")));
+	    	if(font_size == 13) $el.css("font-size", 15);
+	    });
+
+	    $("#playlist").on("mouseout", "li", function(){
+	    	var index = $(this).index()
+	    	  , $el = $("#playlist li:eq(" + index + ")");
+	    	var font_size = parseInt($el.css("fontSize")
+	    		.substr(0, $el.css("fontSize").indexOf("px")));
+	    	if(font_size == 15) $el.css("font-size", 13);
+	    });
+
+	    $("#playlist").on("click", "li", function(event){
+	    	var index = $(this).index();
+	    	var state = p.getState();
+	    	if(state == "IDLE" || state == "PAUSED") $("#play").trigger("click");
+
+	    	if(index != p.getItemIdx())
+	    	{
+	    		p.setActiveItem(index);
+	    	} else {
+	    		p.setStop();
+	    		p.setPlay();
+	    		// p.setActiveItem("same");
+	    	}
+	    });
+
+	    $("#play").click(function(){
+	    	var state = p.getState();
+	    	if(state == "PAUSED" || state == "IDLE")
+	    	{
+	    		$(this).removeClass("ui-state-default");
+	    		$(this).addClass("ui-state-active");
+	    		if(state == "PAUSED")
+	    		{
+		    		$("#pause").removeClass("ui-state-active");
+		    		$("#pause").addClass("ui-state-default");
+	    		}
+	    		p.setPlay();
+	    	}
+	    });
+
+	    $("#pause").click(function(){
+	    	if(p.getState() == "PLAYING")
+	    	{
+	    		$("#play").removeClass("ui-state-active");
+	    		$("#play").addClass("ui-state-default");
+	    		$(this).removeClass("ui-state-default");
+	    		$(this).addClass("ui-state-active");
+	    		p.setPause();
+	    		paused = true;
+	    	}
+	    });
+
+	    $("#stop").click(function(){
+	    	var state = p.getState()
+	    	  , ref = this;
+	    	if(state == "PLAYING")
+	    	{
+	    		$("#play").removeClass("ui-state-active");
+	    		$("#play").addClass("ui-state-default");
+	    	}
+	    	else if(state == "PAUSED")
+	    	{
+		    	$("#pause").removeClass("ui-state-active");
+		    	$("#pause").addClass("ui-state-default");
+	    	}
+	    	$(this).removeClass("ui-state-default");
+	    	$(this).addClass("ui-state-active");
+	    	
+	    	p.setStop();
+
+	    	$("#slider").slider("value", 0);
+	    	last_value = 0;
+
+	    	setTimeout(function(){
+		    	$(ref).removeClass("ui-state-active");
+		    	$(ref).addClass("ui-state-default");
+	    	}, 400);
+	    });
+
+	    $("#next-track, #previous-track").click(function(){
+	    	var ref = this;
+	    	$(this).removeClass("ui-state-default");
+	    	$(this).addClass("ui-state-active");
+
+	    	setTimeout(function(){
+		    	$(ref).removeClass("ui-state-active");
+		    	$(ref).addClass("ui-state-default");
+	    	}, 400);
+	    });
+
+		$("#slider")
+			.slider({min: 0, max: 2000, value: 0
+			, animate: true,
+			start : function(event)
+			{
+				manual_change = true;
+			},
+			change : function (event)
+			{
+				if (manual_change)
+				{
+					var value = $(this).slider ("value");
+					last_value = value;
+					var val = (parseInt(value) * p.getDuration()) / 2000;
+					p.setSeek( val );
+					manual_change = false;
+				}
+			}
+		});
+
+		p.addListener("state", function(event){
+			// PLAYING PAUSED IDLE STOPPED
+			switch(event)
+			{
+				case "PLAYING":
+				{
+					if(paused && p.getState() == "PAUSED") paused = false;
+					else
+					{
+						$playing = $("#playlist li:eq(" +
+							+ p.getItemIdx() +  ")");
+						$playing.animate({fontSize: 18});
+						var single_name = $playing.text();
+						$("#now-playing").hide(0).text(single_name)
+						.fadeIn(800);
+
+						if(auth == true)
+						{
+							var $el = $("#playlist li:eq("+ p.getItemIdx() +")");
+							var _id = $el.attr("data-id");
+							$("#delete-track").removeClass("ui-state-disabled").addClass("ui-state-default").attr("data-current-id", _id).attr("data-current-idx", p.getItemIdx());
+							$("#delete-track--title").text($el.text());
+						}
+					}
+				} break;
+				case "DESTROYING":
+				{
+						$destroying = $("#playlist li:eq(" +
+							+ p.getItemIdx() +  ")");
+						$destroying.animate({fontSize: 13});
+				}
+				default: break;
+			}
+		});
+		setInterval(function(){
+			if(p.getState() == "PLAYING")
+			{
+				last_value = ( p.getPosition() * 2000) / p.getDuration();
+				$("#slider").slider("value", (last_value++) % 2000);
+			}
+		}, 200);
+
+
+        } // on ready 
+        ); //  projekktor()
+
+	});
+	</script>
+
+</div></section>
+</html>
